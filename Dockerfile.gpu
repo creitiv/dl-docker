@@ -1,4 +1,4 @@
-FROM nvidia/cuda:8.0-cudnn5-devel-ubuntu14.04
+FROM nvidia/cuda:8.0-cudnn5-devel-ubuntu16.04
 
 MAINTAINER Sai Soundararaj <saip@outlook.com>
 
@@ -6,7 +6,7 @@ ARG THEANO_VERSION=rel-0.8.2
 ARG TENSORFLOW_VERSION=0.12.1
 ARG TENSORFLOW_ARCH=gpu
 ARG KERAS_VERSION=1.2.0
-ARG LASAGNE_VERSION=v0.1
+ARG LASAGNE_VERSION=master
 ARG TORCH_VERSION=latest
 ARG CAFFE_VERSION=master
 
@@ -32,7 +32,7 @@ RUN apt-get update && apt-get install -y \
 		liblcms2-dev \
 		libopenblas-dev \
 		liblapack-dev \
-		libopenjpeg2 \
+		libopenjpeg-dev \
 		libpng12-dev \
 		libssl-dev \
 		libtiff5-dev \
@@ -80,6 +80,7 @@ RUN apt-get update && apt-get install -y \
 		ant \
 		default-jdk \
 		doxygen \
+		sudo \
 		&& \
 	apt-get clean && \
 	apt-get autoremove && \
@@ -89,7 +90,7 @@ RUN apt-get update && apt-get install -y \
 
 # Install pip
 RUN curl -O https://bootstrap.pypa.io/get-pip.py && \
-	python get-pip.py && \
+	python3 get-pip.py && \
 	rm get-pip.py
 
 # Add SNI support to Python
@@ -101,15 +102,13 @@ RUN pip --no-cache-dir install \
 # Install useful Python packages using apt-get to avoid version incompatibilities with Tensorflow binary
 # especially numpy, scipy, skimage and sklearn (see https://github.com/tensorflow/tensorflow/issues/2034)
 RUN apt-get update && apt-get install -y \
-		python-numpy \
-		python-scipy \
-		python-nose \
-		python-h5py \
-		python-skimage \
-		python-matplotlib \
-		python-pandas \
-		python-sklearn \
-		python-sympy \
+		python3-numpy \
+		python3-scipy \
+		python3-nose \
+		python3-h5py \
+		python3-skimage \
+		python3-matplotlib \
+		python3-pandas \
 		&& \
 	apt-get clean && \
 	apt-get autoremove && \
@@ -128,13 +127,15 @@ RUN pip --no-cache-dir install --upgrade ipython && \
 		sphinx \
 		wheel \
 		zmq \
+		scikit-learn \
+		sympy \
 		&& \
-	python -m ipykernel.kernelspec
+	python3 -m ipykernel.kernelspec
 
 
 # Install TensorFlow
 RUN pip --no-cache-dir install \
-	https://storage.googleapis.com/tensorflow/linux/${TENSORFLOW_ARCH}/tensorflow_${TENSORFLOW_ARCH}-${TENSORFLOW_VERSION}-cp27-none-linux_x86_64.whl
+  https://storage.googleapis.com/tensorflow/linux/${TENSORFLOW_ARCH}/tensorflow-${TENSORFLOW_VERSION}-cp35-cp35m-linux_x86_64.whl
 
 
 # Install dependencies for Caffe
@@ -230,6 +231,10 @@ RUN git clone --depth 1 https://github.com/opencv/opencv.git /root/opencv && \
 	ldconfig && \
 	echo 'ln /dev/null /dev/raw1394' >> ~/.bashrc
 
+# Update the dateutil library at the end as it might have been overwritten with an old and broken
+# version during the installation of the other packages (see https://stackoverflow.com/a/38651340/3927170)
+RUN pip --no-cache-dir install --upgrade python-dateutil
+
 # Set up notebook config
 COPY jupyter_notebook_config.py /root/.jupyter/
 
@@ -240,4 +245,4 @@ COPY run_jupyter.sh /root/
 EXPOSE 6006 8888
 
 WORKDIR "/root"
-CMD ["/bin/bash"]
+CMD ["/root/run_jupyter.sh"]
